@@ -126,38 +126,45 @@ def store_jest_test_case(app_path: str, original_file_path: str, test_code: str)
 
 create_jest_test_agent = Agent(
         name="JestTestCaseAgent",
-        model=OpenAIChat(model_name="gpt-4"),
-        system_prompt=(
+        model=OpenAIChat(model_name="gpt-4o-mini"),
+        description=(
             "You are a highly skilled JavaScript/TypeScript developer with deep expertise in Next.js and Jest. "
             "You generate Jest test cases for Next.js applications. The user will provide Next.js component or API code, "
             "and you will provide a Jest test suite."
         ),
         instructions=[
-        """
-        1. Call the `get_nextjs_file_paths` tool with the user-provided Next.js root path.
-        2. You will receive a JSON with { "pages": [...], "components": [...] }.
-        3. For each file_path in pages:
-           - Call `get_file_code(file_path)` to read the code
-           - Generate a Jest test suite for that page
-           - Call `store_jest_test_case(<app_path>, file_path, <test_code>)` to store the test
-        4. Repeat for each file_path in components
-        5. Return a summary message, or simply re-return the {pages, components} to confirm completion.
-        """
+             "**Your goal**: Produce Jest tests that thoroughly cover the provided Next.js functionality.",
+            "Make sure to:\n"
+            "  - Include meaningful test names.\n"
+            "  - Test both success and failure paths if relevant.\n"
+            "  - Use @testing-library/react or relevant frameworks if requested.\n"
+            "  - Provide helpful comments where necessary.\n"
+            "**Output**:\n"
+            "  - Return the Jest test file as a code block. "
+            "  - For instance, use triple backticks with js or ts syntax.\n"
+        # """
+        # 1. Call the `get_nextjs_file_paths` tool with the user-provided Next.js root path.
+        # 2. You will receive a JSON with { "pages": [...], "components": [...] }.
+        # 3. For each file_path in pages:
+        #    - Call `get_file_code(file_path)` to read the code
+        #    - Generate a Jest test suite for that page
+        #    - Call `store_jest_test_case(<app_path>, file_path, <test_code>)` to store the test
+        # 4. Repeat for each file_path in components
+        # 5. Return a summary message, or simply re-return the {pages, components} to confirm completion.
+        # """
         ],
         # Optional: turn on reasoning if you want step-by-step chain-of-thought logs
-        reasoning=True,
         tools=[
-            get_nextjs_file_paths,
+            # get_nextjs_file_paths,
             get_file_code,
             store_jest_test_case_of_file,
             # ... any other tools, if needed
         ],
         show_tool_calls=True,
-        stream=True,
         debug_mode=True,
         # Optional: read from or write to memory, store sessions, etc.
     )
 
 # Create the specialized agent instance
-create_jest_test_agent.print_response("Get the file paths of all .tsx files for the app at path `/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui`. Generate the unit test cases by calling the tool to get the code for each file and store the test cases in the right location using the store tool, repeat it for all the files")  # Print the response to the user
-# create_jest_test_agent.print_response("Generate the unit test cases for the app at path /Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui/src/app/admin/components/dashboard/setup/resultsComponents/adminListView.tsx by calling the tool to get the code, repeat it for all the files and then store the test cases in the right location using the store tool")  # Print the response to the user
+# create_jest_test_agent.print_response("Get the file paths of all .tsx files for the app at path `/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui`. Generate the unit test cases by calling the tool to get the code for each file and store the test cases in the right location using the store tool, repeat it for all the files")  # Print the response to the user
+create_jest_test_agent.print_response("Generate the unit test cases for the app at path /Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui/src/app/admin/components/dashboard/setup/resultsComponents/adminListView.tsx by calling `get_file_code` tool to get the code, and then store the test cases in the right location using `store_jest_test_case` tool")  # Print the response to the user

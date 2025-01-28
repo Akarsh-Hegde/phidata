@@ -94,73 +94,6 @@ def get_nextjs_file_paths(app_path: str):
     print(f"Found {len(pages)} page files and {len(components)} component files.")
     return {"pages": pages, "components": components}
 
-def store_jest_test_case(app_path: str, original_file_path: str, test_code: str):
-    """
-    Use this function to store the generated Jest test code in a '__tests__' folder structure
-    mirroring the original file path.
-
-    By default, the test file will have the same name + '.test'
-    and will be placed under app_path/__tests__/...
-
-    Args:
-        app_path (str): Path to the root directory of the Next.js app
-        original_file_path (str): The original file (page or component) path
-        test_code (str): The Jest test code to be saved
-    """
-    # Calculate the relative path to keep the folder structure
-    relative_path = os.path.relpath(original_file_path, app_path)
-
-    # Build the path under the '__tests__' directory
-    test_file_path = os.path.join(app_path, "__tests__", relative_path)
-
-    # Make sure the directory exists
-    os.makedirs(os.path.dirname(test_file_path), exist_ok=True)
-
-    # Replace the extension with '.test.<ext>'
-    base, ext = os.path.splitext(test_file_path)
-    test_file_path = base + ".test" + ext
-
-    # Write the Jest test code
-    with open(test_file_path, "w", encoding="utf-8") as f:
-        f.write(test_code)
-
-create_jest_test_agent = Agent(
-        name="JestTestCaseAgent",
-        model=OpenAIChat(model_name="gpt-4"),
-        system_prompt=(
-            "You are a highly skilled JavaScript/TypeScript developer with deep expertise in Next.js and Jest. "
-            "You generate Jest test cases for Next.js applications. The user will provide Next.js component or API code, "
-            "and you will provide a Jest test suite."
-        ),
-        instructions=[
-        """
-        1. Call the `get_nextjs_file_paths` tool with the user-provided Next.js root path.
-        2. You will receive a JSON with { "pages": [...], "components": [...] }.
-        3. For each file_path in pages:
-           - Call `get_file_code(file_path)` to read the code
-           - Generate a Jest test suite for that page
-           - Call `store_jest_test_case(<app_path>, file_path, <test_code>)` to store the test
-        4. Repeat for each file_path in components
-        5. Return a summary message, or simply re-return the {pages, components} to confirm completion.
-        """
-        ],
-        # Optional: turn on reasoning if you want step-by-step chain-of-thought logs
-        reasoning=True,
-        tools=[
-            get_nextjs_file_paths,
-            get_file_code,
-            store_jest_test_case_of_file,
-            # ... any other tools, if needed
-        ],
-        show_tool_calls=True,
-        stream=True,
-        debug_mode=True,
-        # Optional: read from or write to memory, store sessions, etc.
-    )
-
-# Create the specialized agent instance
-# create_jest_test_agent.print_response("Get the file paths of all .tsx files for the app at path `/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui`. Generate the unit test cases by calling the tool to get the code for each file and store the test cases in the right location using the store tool, repeat it for all the files")  # Print the response to the user
-# create_jest_test_agent.print_response("Generate the unit test cases for the app at path /Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui/src/app/admin/components/dashboard/setup/resultsComponents/adminListView.tsx by calling the tool to get the code, repeat it for all the files and then store the test cases in the right location using the store tool")  # Print the response to the user
 
 def generate_test_cases_for_app(app_path: str):
     """
@@ -177,7 +110,8 @@ def generate_test_cases_for_app(app_path: str):
     components = file_paths_dict["components"]
 
     # Combine both pages and components
-    all_file_paths = pages + components
+    # all_file_paths = pages + components
+    all_file_paths = components
     print(f"Found {len(all_file_paths)} .tsx files in total.")
     # Go through each .tsx file and generate+store tests
     for file_path in all_file_paths:
@@ -190,14 +124,14 @@ def generate_test_cases_for_app(app_path: str):
         
         create_jest_test_agent = Agent(
         name="JestTestCaseAgent",
-        model=OpenAIChat(model_name="gpt-4"),
-        system_prompt=(
-            "You are a highly skilled JavaScript/TypeScript developer with deep expertise in Nextjs and Jest. "
-            "You generate Jest test cases for Nextjs applications. The user will provide Nextjs component or API code, "
+        model=OpenAIChat(model_name="gpt-4o"),
+        description=(
+            "You are a highly skilled JavaScript/TypeScript developer with deep expertise in Next.js and Jest. "
+            "You are inside a for loop to generate Jest test cases for Next.js components. The user will provide Next.js component path,"
             "and you will provide a Jest test suite."
         ),
         instructions=[
-        "**Your goal**: Produce Jest tests that thoroughly cover the provided Next.js functionality.",
+            "**Your goal**: Produce Jest tests that thoroughly cover the provided Next.js functionality.",
             "Make sure to:\n"
             "  - Include meaningful test names.\n"
             "  - Test both success and failure paths if relevant.\n"
@@ -208,19 +142,24 @@ def generate_test_cases_for_app(app_path: str):
             "  - For instance, use triple backticks with js or ts syntax.\n"
         ],
         # Optional: turn on reasoning if you want step-by-step chain-of-thought logs
-        reasoning=True,
+        # reasoning=True,
         tools=[
             get_file_code,
             store_jest_test_case_of_file,
             # ... any other tools, if needed
         ],
         show_tool_calls=True,
-        stream=True,
+        # stream=True,
         debug_mode=True,
         # Optional: read from or write to memory, store sessions, etc.
+        # memory: AgentMemory = AgentMemory()
+        # # add_history_to_messages=true adds the chat history to the messages sent to the Model.
+        # add_history_to_messages: True
+        # # Number of historical responses to add to the messages.
+        # num_history_responses: int = 3
         )
         
-        create_jest_test_agent.print_response(f"Generate minimum 50 unit test cases for the component at path {file_path} by calling the tool to get the code for each file and store the test cases in the right location using the store tool")  # Print the response to the user
+        create_jest_test_agent.print_response(f"Generate minimum 50 unit test cases for the code at path {file_path} by calling the tool to get the code and store the test cases in the right location using the store tool")  # Print the response to the user
     
     
 if __name__ == "__main__":
