@@ -4,17 +4,7 @@ from phi.agent import Agent
 from phi.model.openai import OpenAIChat
 from phi.tools import tool, FunctionCall
 
-# Hooks for debugging
-def pre_hook(fc: FunctionCall):
-    print(f"[DEBUG] Pre-hook: {fc.function.name}")
-    print(f"[DEBUG] Arguments: {fc.arguments}")
 
-def post_hook(fc: FunctionCall):
-    print(f"[DEBUG] Post-hook: {fc.function.name}")
-    print(f"[DEBUG] Result: {fc.result}")
-
-# Tool to read the file content
-@tool(pre_hook=pre_hook, post_hook=post_hook)
 def get_file_code(file_path: str) -> str:
     if not os.path.exists(file_path):
         print(f"[ERROR] File not found: {file_path}")
@@ -26,7 +16,6 @@ def get_file_code(file_path: str) -> str:
         return content if content else "[ERROR] File is empty."
 
 # Tool to store Jest test cases
-@tool(pre_hook=pre_hook, post_hook=post_hook)
 def store_jest_test_case_of_file(app_path: str, file_path: str, test_code: str):
     if not test_code.strip():
         print(f"[ERROR] No test code generated for {file_path}. Skipping storage.")
@@ -67,10 +56,10 @@ writer_agent = Agent(
     name="WriterAgent",
     model=OpenAIChat(model_name="gpt-4o"),
     description="Generates Jest test cases for Next.js components.",
-    instructions=[
-        "Given the content of a Next.js component, generate Jest test cases.",
-        "Ensure test coverage includes success and failure cases.",
-        "Return the Jest test cases as a formatted code block enclosed in triple quotes (```js).",
+   instructions=[
+    "Given the content of a Next.js component, generate Jest test cases.",
+    "Ensure test coverage includes both success and failure cases.",
+    "Return the Jest test cases as a formatted code block enclosed correctly within triple double quotes (\"\"\"):",
     ],
     debug_mode=True,
 )
