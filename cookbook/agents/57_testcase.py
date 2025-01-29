@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 from phi.agent import Agent, RunResponse
 from phi.model.openai import OpenAIChat
 from phi.tools import tool
+import re  # Import regular expressions module
+import json  # Import JSON module
 
 # ======================== Pydantic Models ========================
 
@@ -23,7 +25,7 @@ class NextJsFilePaths(BaseModel):
 
 # ======================== Tools ========================
 
-@tool
+
 def get_file_code(file_path) -> str:
     """
     Use this function to read the contents of each Next.js component file.
@@ -44,7 +46,7 @@ def get_file_code(file_path) -> str:
         print(f"[DEBUG] Read file: {file_path}, Content length: {len(content)}")
         return content if content else "[ERROR] File is empty."
 
-@tool
+
 def store_jest_test_case_of_file(test_data: JestTestCase):
     """
     Use this function to store the generated test data in a '__tests__' folder structure
@@ -102,14 +104,6 @@ def get_nextjs_file_paths(app_path: str) -> NextJsFilePaths:
 
 # ======================== Agents ========================
 
-reader_agent = Agent(
-    name="ReaderAgent",
-    model=OpenAIChat(model_name="gpt-4o"),
-    description="Reads the content of Next.js component file.",
-    tools=[get_file_code],
-    instructions=["Use the `get_file_code` tool to read the code by passing the file_path to the tool as parameter"],
-    # debug_mode=True,
-)
 
 writer_agent = Agent(
     name="WriterAgent",
@@ -119,46 +113,20 @@ writer_agent = Agent(
         "Given the content of a Next.js component, generate Jest test cases.",
         "Ensure test coverage includes both success and failure cases.",
         "Return the Jest test cases inside a structured JSON object.",
-        "The response should be an object with the following keys:",
-        "- app_path (str): The root directory of the Next.js app.",
-        "- file_path (str): The full path of the component file being tested.",
-        "- test_code (str): The Jest test code formatted properly.",
-        "The test code should be enclosed within a correctly formatted JavaScript code block using triple backticks (```js ... ```)."
+        "The response should be a valid JSON object, **not** a stringified JSON.",
+        "The object should have the following keys:",
+        "- `app_path` (str): The root directory of the Next.js app (D:\\ShopLC\\shop-lc-ui).",
+        "- `file_path` (str): The full path of the component file being tested.",
+        "- `test_code` (str): The Jest test code formatted as a raw JavaScript string.",
+        "The `test_code` should be a valid JavaScript test file without surrounding triple backticks or special formatting."
     ],
-    expected_output= (
-        "A JSON object with:\n"
-        "- `app_path` (string): Path to the root directory of the Next.js app.\n"
-        "- `file_path` (string): Full path of the component file being tested.\n"
-        "- `test_code` (string): Jest test code formatted as a JavaScript code block."
-    )
-)
-
-store_agent = Agent(
-    name="StoreAgent",
-    model=OpenAIChat(model_name="gpt-4o"),
-    description="Stores Jest test cases in the correct file location.",
-    tools=[store_jest_test_case_of_file],
-    instructions=["Use the `store_jest_test_case_of_file` tool to save test cases in the correct loaction"],
-    # debug_mode=True,
-)
-
-orchestrator_agent = Agent(
-    name="OrchestratorAgent",
-    description="Coordinates the test generation workflow.",
-    team=[reader_agent, writer_agent, store_agent],
-    instructions=[
-        "For the given file path, perform the following steps in orderone by one:",
-        "1. Use `ReaderAgent` to read the file content by using the file_path as the parameter into the tool",
-        "2. Get the response from the `ReaderAgent` and pass it to the `WriterAgent` to generate Jest test cases",
-        "3. Use `WriterAgent` to generate test cases by taking the code that we get for a particular file path",
-        "4. Get the response in a particular format and pass it to the `StoreAgent` to store the test cases in the correct location.",
-        "5. Store the test cases using the `StoreAgent` tool.",
-    ],
-    # debug_mode=True,
+    response_model=JestTestCase,
 )
 
 
 # ======================== Runner Functions ========================
+
+
 
 def generate_test_cases_for_app(app_path: str):
     """
@@ -166,17 +134,16 @@ def generate_test_cases_for_app(app_path: str):
     """
     file_paths = get_nextjs_file_paths(app_path)
     print("filepaths: ", file_paths)
-
+    
     for file_path in file_paths.components:
         print(f"\n[PROCESSING] {file_path}")
+        content = get_file_code(file_path)
 
-        response = orchestrator_agent.print_response(file_path)
-            # f"This is the filepath: {file_path}. "
-            # f"1. Read this file using ReaderAgent, 2. Generate Jest test cases for the content using WriterAgent, "
-            # f"3. Store the test cases using StoreAgent. App root is {app_path}."
+        response = writer_agent.run(content)
+        print(f"[DEBUG] Raw response from WriterAgent: {response.content}")
 
-        print(f"[DEBUG] Processing complete for {file_path}\n")
-
+        store_jest_test_case_of_file(response.content)
+        print(f"[DEBUG] Test case stored for {file_path}\n")
 
 # ======================== Main Execution ========================
 
