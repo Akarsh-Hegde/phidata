@@ -2,12 +2,12 @@ from phi.agent.agent import Agent
 from phi.model.openai import OpenAIChat
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
-
 import os
 
 class NextJsFilePaths(BaseModel):
     pages: List[str] = Field(..., description="List of all page.tsx file paths")
     components: List[str] = Field(..., description="List of all other .tsx file paths")
+
 
 def get_file_code(file_path: str):
     """
@@ -168,3 +168,23 @@ create_jest_test_agent = Agent(
 # Create the specialized agent instance
 # create_jest_test_agent.print_response("Get the file paths of all .tsx files for the app at path `/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui`. Generate the unit test cases by calling the tool to get the code for each file and store the test cases in the right location using the store tool, repeat it for all the files")  # Print the response to the user
 create_jest_test_agent.print_response("Generate the unit test cases for the app at path /Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui/src/app/admin/components/dashboard/setup/resultsComponents/adminListView.tsx by calling `get_file_code` tool to get the code, and then store the test cases in the right location using `store_jest_test_case` tool")  # Print the response to the user
+
+
+# def run_agents():
+#     try:
+#         file_path = "/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui/src/app/admin/components/dashboard/setup/resultsComponents/adminListView.tsx"
+#         app_path = "/Users/akarshhegde/Documents/Forgd/PESU/4gd-pesu-eval-ui"
+
+#         # Step 1: Read File Content
+#         # display_header("Running ReaderAgent: Fetching Code", panel_title="Step 1: Read Code")
+#         with console.status("Fetching code...", spinner="dots"):
+#             file_content_response: RunResponse = create_jest_test_agent.run(file_path)
+        
+#         if not file_content_response or not file_content_response.content.strip():
+#             console.print("[bold red]Error: Failed to read the component file.[/bold red]")
+#             return
+        
+#         display_content(file_content_response.content, title="Component Code")
+
+#     except Exception as e:
+#         console.print(f"[bold red]Error occurred while running agents: {e}[/bold red]")

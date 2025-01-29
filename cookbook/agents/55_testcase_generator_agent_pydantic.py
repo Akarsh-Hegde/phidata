@@ -34,6 +34,7 @@ def get_file_code(file_path) -> str:
     Returns:
         str: The contents of the component file
     """
+    # file_path = filePath.file_path
     print("[DEBUG] This is the file path I am reading", file_path)
     if not os.path.exists(file_path):
         print(f"[ERROR] File not found: {file_path}")
@@ -48,16 +49,20 @@ def get_file_code(file_path) -> str:
 @tool
 def store_jest_test_case_of_file(test_data: JestTestCase):
     """
-    Use this function to store the generated test data in a '__tests__' folder structure
-    mirroring the original file path.
+    Use this function to store the Jest test cases for a given Next.js component in a '__tests__' folder structure,
+    maintaining the original file structure inside the Next.js project.
 
-    By default, the test file will have the same name + '.test'
-    and will be placed under app_path/__tests__/...
+    The Jest test file will be named as <component_name>.test.js and will be placed under:
+        {app_path}/__tests__/{relative_component_path}.test.js
 
     Args:
-        app_path (str): Path to the root directory of the Next.js app
-        file_path (str): The original file (page or component) path
-        test_code (str): The Jest test code to be saved
+        test_data (JestTestCase): A Pydantic model that contains:
+            - app_path (str): The root directory of the Next.js application.
+            - file_path (str): The original file path of the Next.js component.
+            - test_code (str): The Jest test case code block formatted as a string within triple quotes.
+
+    Returns:
+        None: Stores the Jest test file in the correct location.
     """
     app_path = test_data.app_path
     file_path = test_data.file_path
@@ -68,8 +73,8 @@ def store_jest_test_case_of_file(test_data: JestTestCase):
         print(f"[ERROR] No test code generated for {file_path}. Skipping storage.")
         return
 
-    relative_path = os.path.relpath(file_path, app_path)
-    test_file_path = os.path.join(app_path, "__tests__", relative_path)
+    # relative_path = os.path.relpath(file_path, app_path)
+    test_file_path = os.path.join(app_path, "__tests__", file_path)
 
     os.makedirs(os.path.dirname(test_file_path), exist_ok=True)
 
@@ -108,7 +113,8 @@ reader_agent = Agent(
     model=OpenAIChat(model_name="gpt-4o"),
     description="Reads the content of Next.js component file.",
     tools=[get_file_code],
-    instructions=["Use the `get_file_code` tool to read the code by passing the file_path to the tool as parameter"],
+    instructions=["Use the `get_file_code` tool to read the code by passing the file_path as parameter"],
+    # response_model=FilePath,
     # debug_mode=True,
 )
 
@@ -119,11 +125,11 @@ writer_agent = Agent(
     instructions=[
         "Given the content of a Next.js component, generate Jest test cases.",
         "Ensure test coverage includes both success and failure cases.",
-        "Return the Jest test cases as a formatted code block enclosed correctly within triple double quotes (\"\"\").",
-        "Inside the triple double quotes, use triple backticks (` ```js ... ``` `) to format the Jest test cases as a JavaScript code block.",
+        "Return the Jest test cases as a formatted code block within triple quotes.",
     ],
     # debug_mode=True,
-    expected_output="Return an object with app_path (str): Path to the root directory of the Next.js app, file_path (str): The original file (page or component) path, test_code (str): The Jest test code to be saved"
+    response_model=JestTestCase,
+    # expected_output="Return an object with app_path (str): Path to the root directory of the Next.js app, file_path (str): The original file (page or component) path, test_code (str): The Jest test code to be saved"
 )
 
 store_agent = Agent(
@@ -131,8 +137,14 @@ store_agent = Agent(
     model=OpenAIChat(model_name="gpt-4o"),
     description="Stores Jest test cases in the correct file location.",
     tools=[store_jest_test_case_of_file],
-    instructions=["Use the `store_jest_test_case_of_file` tool to save test cases in the correct loaction"],
-    # debug_mode=True,
+    instructions=["Use the `store_jest_test_case_of_file` tool to save test cases in the correct location using test_data following the below format:",
+                  "test_data (JestTestCase): A Pydantic model that contains:"
+                    "- app_path (str): The root directory of the Next.js application."
+                    "- file_path (str): The original file path of the Next.js component."
+                    "- test_code (str): The Jest test case code block formatted as a string within triple quotes."
+                  "Saving is completed once [DEBUG] Test file stored at: file_path comes in CLI"
+                  ],
+    debug_mode=True,
 )
 
 orchestrator_agent = Agent(
@@ -145,7 +157,7 @@ orchestrator_agent = Agent(
         "2. Use `WriterAgent` to generate test cases by taking the code that we get for a particular file path",
         "3. Use `StoreAgent` to store the respose of the writer agent in the correct location.",
     ],
-    # debug_mode=True,
+    debug_mode=True,
 )
 
 # ======================== Runner Functions ========================
@@ -160,11 +172,11 @@ def generate_test_cases_for_app(app_path: str):
     for file_path in file_paths.components:
         print(f"\n[PROCESSING] {file_path}")
 
-        response = orchestrator_agent.print_response(file_path)
-            # f"This is the filepath: {file_path}. "
-            # f"1. Read this file using ReaderAgent, 2. Generate Jest test cases for the content using WriterAgent, "
-            # f"3. Store the test cases using StoreAgent. App root is {app_path}."
-
+        response = orchestrator_agent.print_response(
+            f"This is the filepath: {file_path}. "
+            f"1. Read this file using ReaderAgent, 2. Generate Jest test cases for the content using WriterAgent, "
+            f"3. Store the test cases using StoreAgent. App root is {app_path}."
+        )
         print(f"[DEBUG] Processing complete for {file_path}\n")
 
 
