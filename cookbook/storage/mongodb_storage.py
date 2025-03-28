@@ -11,7 +11,7 @@ from phi.tools.duckduckgo import DuckDuckGo
 from phi.storage.agent.mongodb import MongoAgentStorage
 
 # MongoDB connection settings
-db_url = "mongodb://localhost:27017"
+db_url = "MongoAgentStorage"
 
 agent = Agent(
     storage=MongoAgentStorage(collection_name="agent_sessions", db_url=db_url, db_name="phi"),

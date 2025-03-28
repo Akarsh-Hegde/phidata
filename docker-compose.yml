@@ -1,0 +1,29 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: agent-backend-api
+    ports:
+      - "7050:7050"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: agent-backend-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: streamlit run custom_agent_builder/app.py --server.baseUrlPath=agent-chat --server.port=8501 --server.address=0.0.0.0

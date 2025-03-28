@@ -30,8 +30,8 @@ class MongoDBVector(VectorDb):
     def __init__(
         self,
         collection_name: str,
-        db_url: Optional[str] = "mongodb://localhost:27017/",
-        database: str = "ai",
+        db_url: Optional[str] = "mongodb://pesu_prod:jd7Aj5Zoixhay4uRaz@pesu.4gd.ai:27017/pesu-prod",
+        database: str = "pesu-prod",
         embedder: Embedder = OpenAIEmbedder(),
         distance_metric: str = Distance.cosine,
         overwrite: bool = False,
